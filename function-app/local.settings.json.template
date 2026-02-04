@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "LOGIC_APP_URL": "YOUR_LOGIC_APP_URL_HERE"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}
