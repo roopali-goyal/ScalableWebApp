@@ -8,7 +8,7 @@ name: Build and Deploy to Azure
 on:
   push:
     branches:
-      - main
+      - Main
   workflow_dispatch:  # Manual trigger
 
 jobs:
