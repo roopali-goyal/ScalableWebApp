@@ -27,7 +27,7 @@ jobs:
       with:
         app-name: ecommerce-roopali-free
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: .
+        package: ./webapp
 
 
   build-and-deploy-staging:
@@ -46,5 +46,5 @@ jobs:
         app-name: ecommerce-roopali-free
         slot-name: 'staging'
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
-        package: .
+        package: ./webapp
     
