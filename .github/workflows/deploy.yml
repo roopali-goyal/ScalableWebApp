@@ -71,12 +71,16 @@ jobs:
       - name: Production Health Check
         run: |
           echo "Running health check on Production..."
-          sleep 15
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ecommerce-roopali-free.azurewebsites.net)
-          echo "Production URL returned HTTP status: $STATUS"
-          if [ "$STATUS" -eq 200 ]; then
-            echo "✅ Production is healthy! Blue-Green deployment successful!"
-          else
-            echo "⚠️ Production returned status: $STATUS"
-            exit 1
-          fi
+          sleep 60
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://ecommerce-roopali-free.azurewebsites.net)
+            echo "Attempt $i: Production URL returned HTTP status: $STATUS"
+            if [ "$STATUS" -eq 200 ]; then
+              echo "✅ Production is healthy! Blue-Green deployment successful!"
+              exit 0
+            fi
+            echo "Retrying in 15 seconds..."
+            sleep 15
+          done
+          echo "⚠️ Production health check failed after 3 attempts"
+          exit 1
