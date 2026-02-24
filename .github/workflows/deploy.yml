@@ -1,50 +1,82 @@
 # ============================================================
-# GitHub Actions CI/CD - E-Commerce Web Application
-# Deploys to Azure App Service using Publish Profile
+# GitHub Actions CI/CD - Blue-Green Deployment
+# E-Commerce Web Application  
 # ============================================================
-
-name: Build and Deploy to Azure
+name: Blue-Green Deployment to Azure
 
 on:
   push:
     branches:
       - Main
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy-production:
-    name: Build and Deploy to Production
+  # Stage 1: Deploy to Blue (Staging Slot)
+  deploy-blue:
+    name: '🔵 Deploy to Blue (Staging)'
     runs-on: ubuntu-latest
-
     steps:
-    # Step 1: Checkout code from repository
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Step 2: Deploy to Azure Web App using Publish Profile
-    - name: Deploy to Azure Web App Production
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: ecommerce-roopali-free
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: webapp
+      - name: Deploy to Staging Slot (Blue)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ecommerce-roopali-free
+          slot-name: 'staging'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          package: webapp
 
-
-  build-and-deploy-staging:
-    name: Build and Deploy to Staging
+  # Stage 2: Validate Blue Environment
+  validate-blue:
+    name: '🔍 Validate Blue (Staging)'
+    needs: deploy-blue
     runs-on: ubuntu-latest
-
     steps:
-    # Step 1: Checkout code from repository
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Health Check on Staging
+        run: |
+          echo "Running health check on Blue (Staging)..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ecommerce-roopali-free-staging-f7dmceezbga6a7ax.centralindia-01.azurewebsites.net)
+          echo "Staging URL returned HTTP status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Health check passed! Blue environment is healthy."
+          else
+            echo "❌ Health check failed! Status: $STATUS"
+            exit 1
+          fi
 
-    # Step 2: Deploy to Azure Web App using Publish Profile
-    - name: Deploy to Azure Web App Staging
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: ecommerce-roopali-free
-        slot-name: 'staging'
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
-        package: webapp
-    
+  # Stage 3: Deploy to Green (Production) - Only after Blue validation passes
+  deploy-green:
+    name: '🟢 Deploy to Green (Production)'
+    needs: validate-blue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production (Green)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ecommerce-roopali-free
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: webapp
+
+  # Stage 4: Verify Production
+  verify-production:
+    name: '✅ Verify Production'
+    needs: deploy-green
+    runs-on: ubuntu-latest
+    steps:
+      - name: Production Health Check
+        run: |
+          echo "Running health check on Production..."
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ecommerce-roopali-free.azurewebsites.net)
+          echo "Production URL returned HTTP status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Production is healthy! Blue-Green deployment successful!"
+          else
+            echo "⚠️ Production returned status: $STATUS"
+            exit 1
+          fi
